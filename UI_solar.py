@@ -39,25 +39,27 @@ uploaded_file = st.file_uploader(
 if uploaded_file is not None:
     try:
         # ────────────────────────────────────────
-        # READ DATA - more robust column handling
+        # READ DATA - robust column handling
         # ────────────────────────────────────────
         df = pd.read_excel(uploaded_file, sheet_name="Sheet1", skiprows=1)
 
-        # Strip whitespace from all column names (critical fix for leading/trailing spaces)
+        # Remove leading/trailing spaces from column names
         df.columns = df.columns.str.strip()
 
-        # Define target column names (English standardized)
+        # Target column names (standardized)
         target_cols = {
             "date": "Date",
+            "statistical period": "Date",
             "theoretical": "Theoretical_Yield",
             "inverter": "Inverter_Yield",
+            "pv yield": "PV_Yield",           # optional - not used but kept
             "peak": "Peak_Power",
             "co2": "CO2_Avoided",
             "charge": "Charge",
             "discharge": "Discharge",
         }
 
-        # Rename based on substring match (case-insensitive, after stripping)
+        # Rename using substring match (case-insensitive)
         rename_map = {}
         for col in df.columns:
             col_lower = col.lower()
@@ -68,7 +70,7 @@ if uploaded_file is not None:
 
         df = df.rename(columns=rename_map)
 
-        # Convert Date - try multiple possible column names
+        # Handle date column
         possible_date_cols = ["Statistical Period", "Date", "StatisticalPeriod"]
         date_col = next((c for c in possible_date_cols if c in df.columns), None)
         if date_col:
@@ -103,7 +105,7 @@ if uploaded_file is not None:
             df_filtered = df.copy()
 
         # ────────────────────────────────────────
-        # SAFE TOTALS (default 0 if column missing)
+        # SAFE TOTALS
         # ────────────────────────────────────────
         total_theo   = df_filtered.get("Theoretical_Yield",   pd.Series(0)).sum()
         total_inv    = df_filtered.get("Inverter_Yield",      pd.Series(0)).sum()
@@ -143,7 +145,7 @@ if uploaded_file is not None:
         st.markdown("---")
 
         # ────────────────────────────────────────
-        # CHARTS TABS (only show traces if column exists)
+        # CHARTS TABS
         # ────────────────────────────────────────
         tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "Үйлдвэрлэл (харьцуулалт)",
@@ -168,20 +170,16 @@ if uploaded_file is not None:
 
         with tab2:
             st.subheader("Өдрийн хамгийн их чадал [кВт]")
-            if "Peak_Power" in df_filtered:
-                fig2 = px.bar(df_filtered, x="Date", y="Peak_Power", color_discrete_sequence=["#14b8a6"])
-            else:
-                fig2 = px.bar(df_filtered, x="Date", y=pd.Series(0, index=df_filtered.index), color_discrete_sequence=["#14b8a6"])
+            y_data = df_filtered.get("Peak_Power", pd.Series(0, index=df_filtered.index))
+            fig2 = px.bar(df_filtered, x="Date", y=y_data, color_discrete_sequence=["#14b8a6"])
             fig2.update_layout(height=500)
             st.plotly_chart(fig2, use_container_width=True)
 
         with tab3:
             st.subheader("CO₂ бууруулсан (тн)")
-            if "CO2_Avoided" in df_filtered:
-                fig3 = px.line(df_filtered, x="Date", y="CO2_Avoided", color_discrete_sequence=["#f59e0b"])
-                fig3.update_traces(line=dict(width=2.8))
-            else:
-                fig3 = px.line(df_filtered, x="Date", y=pd.Series(0, index=df_filtered.index), color_discrete_sequence=["#f59e0b"])
+            y_data = df_filtered.get("CO2_Avoided", pd.Series(0, index=df_filtered.index))
+            fig3 = px.line(df_filtered, x="Date", y=y_data, color_discrete_sequence=["#f59e0b"])
+            fig3.update_traces(line=dict(width=2.8))
             fig3.update_layout(height=500)
             st.plotly_chart(fig3, use_container_width=True)
 
@@ -217,7 +215,7 @@ if uploaded_file is not None:
                 st.plotly_chart(fig_pie, use_container_width=True)
 
         # ────────────────────────────────────────
-        # DATA TABLE - dynamic columns
+        # DATA TABLE - safe formatting (no .round(2) crash)
         # ────────────────────────────────────────
         st.markdown("---")
         st.subheader("Гол үзүүлэлтүүд")
@@ -241,15 +239,23 @@ if uploaded_file is not None:
 
         st.dataframe(
             display_df[["Date"] + existing_cols]
-            .rename(columns=rename_dict_display)
-            .round(2),
+            .rename(columns=rename_dict_display),
             use_container_width=True,
-            height=400
+            height=400,
+            column_config={
+                "Огноо": st.column_config.TextColumn(),
+                "Боломжит [кВт.ц]": st.column_config.NumberColumn(format="%,.0f"),
+                "Үйлдвэрлэсэн [кВт.ц]": st.column_config.NumberColumn(format="%,.0f"),
+                "Хамгийн их чадал [кВт]": st.column_config.NumberColumn(format="%,.1f"),
+                "CO₂ бууруулсан [тн]": st.column_config.NumberColumn(format="%,.2f"),
+                "Цэнэглэсэн [кВт.ц]": st.column_config.NumberColumn(format="%,.0f"),
+                "Нийлүүлсэн [кВт.ц]": st.column_config.NumberColumn(format="%,.0f"),
+            }
         )
 
     except Exception as e:
         st.error(f"Файлыг уншихад алдаа гарлаа: {str(e)}")
-        st.info("Шалгах зүйлс:\n• Файл .xlsx форматтай эсэх\n• Sheet1 байгаа эсэх\n• Эхний мөрүүд зөв эсэх (skiprows=1 тохиромжтой эсэх)")
+        st.info("Шалгах зүйлс:\n• Файл .xlsx форматтай эсэх\n• Sheet1 байгаа эсэх\n• Эхний мөрүүд зөв эсэх")
 
 else:
     st.info("Файл сонгоно уу")
