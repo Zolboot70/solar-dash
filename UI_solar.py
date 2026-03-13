@@ -107,12 +107,12 @@ if uploaded_file is not None:
         # ────────────────────────────────────────
         st.subheader("Сүлжээнээс нийлүүлсэн эрчим хүч")
         grid_energy = st.number_input(
-            "Сүлжээнээс нийлүүлсэн эрчим хүчийг оруулна уу (кВт.ц)",
+            "Сүлжээнээс нийлүүлсэн эрчим хүчийг оруулна уу (кВт·ц)",
             min_value=0.0,
             value=0.0,
             step=100.0,
             format="%.0f",
-            help="Суга сда уншаад ойлгодоггүй юм уу"
+            help="Сүлжээнээс авсан нийт эрчим хүчийг оруулна уу"
         )
 
         # ────────────────────────────────────────
@@ -128,11 +128,11 @@ if uploaded_file is not None:
             1200
         )
 
-        col1.metric("Үйлдвэрлэх боломжит эрчим хүч", f"{total_theo:,.0f} кВт.ц")
-        col2.metric("Үйлдвэрлэсэн эрчим хүч",       f"{total_inv:,.0f} кВт.ц")
+        col1.metric("Үйлдвэрлэх боломжит эрчим хүч", f"{total_theo:,.0f} кВт·ц")
+        col2.metric("Үйлдвэрлэсэн эрчим хүч",       f"{total_inv:,.0f} кВт·ц")
         col3.metric("CO₂ бууруулсан",                f"{total_co2:,.2f} тн")
-        col4.metric("Нийт ЦЭХ хэрэглээ",            f"{total_consumption:,.0f} кВт.ц")
-        col5.metric("Батарейнаас нийлүүлсэн",        f"{total_disch:,.0f} кВт.ц")
+        col4.metric("Нийт ЦЭХ хэрэглээ",            f"{total_consumption:,.0f} кВт·ц")
+        col5.metric("Батарейнаас нийлүүлсэн",        f"{total_disch:,.0f} кВт·ц")
         col6.metric("Max чадлын дундаж",             f"{avg_peak:,.1f} кВт")
 
         st.markdown("---")
@@ -145,7 +145,7 @@ if uploaded_file is not None:
             "Чадлын оргил утга",
             "CO₂ бууралт",
             "Батарей (цэнэглэлт / нийлүүлэлт)",
-            "Сүлжээ vs НЦС-ын үйлдвэрлэл"
+            "Сүлжээ vs Өөрийн үйлдвэрлэл"
         ])
 
         with tab1:
@@ -216,13 +216,13 @@ if uploaded_file is not None:
             st.plotly_chart(fig4, use_container_width=True)
 
         with tab5:
-            st.subheader("Сүлжээнээс нийлүүлсэн vs НЦС-ын үйлдвэрлэсэн")
+            st.subheader("Сүлжээнээс нийлүүлсэн vs Өөрийн үйлдвэрлэсэн эрчим хүч")
             
             total_produced = df_filtered.get("Inverter_Yield", pd.Series(0)).sum()
             total_grid = grid_energy
             
             if total_produced + total_grid == 0:
-                st.info("Өгөгдөл байхгүй эсвэл нийт утга 0 байна.")
+                st.info("Өгөгдөл байхгүй эсвэл нийт 0 байна.")
             else:
                 pie_data = pd.DataFrame({
                     "Төрөл": ["Өөрийн үйлдвэрлэсэн", "Сүлжээнээс нийлүүлсэн"],
@@ -240,15 +240,24 @@ if uploaded_file is not None:
                 fig_pie.update_traces(
                     textposition='inside',
                     textinfo='percent+label',
-                    sort=False,
-                    rotation=0                      # ← Prevents 90° rotation
+                    insidetextorientation='horizontal',  # ← This prevents tilted/rotated text
+                    rotation=0,
+                    sort=False
                 )
                 
                 fig_pie.update_layout(
-                    height=550,                         # Slightly taller to help layout
+                    height=600,
                     autosize=False,
-                    margin=dict(l=20, r=20, t=40, b=100),
-                    legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5)
+                    margin=dict(l=40, r=40, t=60, b=140),
+                    legend=dict(
+                        orientation="h",
+                        yanchor="top",
+                        y=-0.25,
+                        xanchor="center",
+                        x=0.5
+                    ),
+                    uniformtext_minsize=12,
+                    uniformtext_mode='hide'
                 )
                 
                 st.plotly_chart(fig_pie, use_container_width=True)
@@ -289,4 +298,3 @@ else:
 
 st.markdown("---")
 st.caption("МАК НЦС үйлдвэрлэл")
-
