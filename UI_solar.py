@@ -1,5 +1,3 @@
-# solar_dashboard.py
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -92,11 +90,11 @@ if uploaded_file is not None:
         total_disch  = df_filtered["Discharge"].sum()
         avg_peak     = df_filtered["Peak_Power"].mean()
 
-        col1.metric("Үйлдвэрлэх боломжит эрчим хүч", f"{total_theo:,.0f} кВт·ц")
+        col1.metric("Үйлдвэрлэх боломжит эрчим хүч", f"{total_theo:,.0f} кВт.ц")
         col2.metric("Үйлдвэрлэсэн эрчим хүч",       f"{total_inv:,.0f} кВт·ц")
         col3.metric("CO₂ бууруулсан",                f"{total_co2:,.2f} тн")
-        col4.metric("Батарейг цэнэглэсэн",           f"{total_charge:,.0f} кВт·ц")
-        col5.metric("Батарейнаас нийлүүлсэн",        f"{total_disch:,.0f} кВт·ц")
+        col4.metric("Батарейг цэнэглэсэн",           f"{total_charge:,.0f} кВт.ц")
+        col5.metric("Батарейнаас нийлүүлсэн",        f"{total_disch:,.0f} кВт.ц")
         col6.metric("Max чадлын дундаж",     f"{avg_peak:,.1f} кВт")
 
         st.markdown("---")
@@ -220,4 +218,5 @@ else:
     st.info("Файл сонгоно уу ")
 
 st.markdown("---")
+
 st.caption("МАК НЦС үйлдювэрлэл")
