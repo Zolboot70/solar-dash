@@ -39,45 +39,57 @@ uploaded_file = st.file_uploader(
 if uploaded_file is not None:
     try:
         # ────────────────────────────────────────
-        # READ DATA - robust column handling
+        # READ DATA
         # ────────────────────────────────────────
         df = pd.read_excel(uploaded_file, sheet_name="Sheet1", skiprows=1)
 
-        # Remove leading/trailing spaces from column names
-        df.columns = df.columns.str.strip()
+        # Clean column names (remove extra spaces)
+        df.columns = df.columns.str.strip().str.replace(r'\s+', ' ', regex=True)
 
-        # Target column names (standardized)
-        target_cols = {
-            "date": "Date",
-            "statistical period": "Date",
-            "theoretical": "Theoretical_Yield",
+        # Flexible renaming keywords
+        rename_keywords = {
+            "date|period|statistical|огноо|хугацаа|report date": "Date",
+            "theoretical|боломжит|yield": "Theoretical_Yield",
             "inverter": "Inverter_Yield",
-            "pv yield": "PV_Yield",           # optional - not used but kept
-            "peak": "Peak_Power",
-            "co2": "CO2_Avoided",
-            "charge": "Charge",
-            "discharge": "Discharge",
+            "pv yield|pv": "PV_Yield",
+            "peak|оргил|max": "Peak_Power",
+            "co2|co₂|carbon": "CO2_Avoided",
+            "charge|цэнэглэсэн": "Charge",
+            "discharge|нийлүүлсэн": "Discharge",
         }
 
-        # Rename using substring match (case-insensitive)
         rename_map = {}
         for col in df.columns:
             col_lower = col.lower()
-            for key, new_name in target_cols.items():
-                if key in col_lower:
+            for pattern, new_name in rename_keywords.items():
+                if any(kw in col_lower for kw in pattern.split('|')):
                     rename_map[col] = new_name
                     break
 
         df = df.rename(columns=rename_map)
 
-        # Handle date column
-        possible_date_cols = ["Statistical Period", "Date", "StatisticalPeriod"]
-        date_col = next((c for c in possible_date_cols if c in df.columns), None)
+        # ────────────────────────────────────────
+        # DATE COLUMN HANDLING - more robust detection
+        # ────────────────────────────────────────
+        possible_date_keywords = [
+            "date", "period", "statistical", "statistical period",
+            "огноо", "хугацаа", "report date", "time"
+        ]
+
+        date_col = None
+        for col in df.columns:
+            col_lower = str(col).lower().strip()
+            if any(kw in col_lower for kw in possible_date_keywords):
+                date_col = col
+                break
+
         if date_col:
             df["Date"] = pd.to_datetime(df[date_col], errors="coerce")
             df = df.drop(columns=[date_col], errors="ignore")
+            # st.info(f"Огнооны багана: {date_col} → Date болголоо")
         else:
-            st.warning("Огнооны багана олдсонгүй (Statistical Period эсвэл Date байх ёстой)")
+            st.error("Огнооны багана олдсонгүй! ('Statistical Period', 'Date', 'Огноо' гэх мэт байх ёстой)")
+            st.stop()
 
         df = df.dropna(subset=["Date"])
         df = df.sort_values("Date")
@@ -112,8 +124,7 @@ if uploaded_file is not None:
         total_co2    = df_filtered.get("CO2_Avoided",         pd.Series(0)).sum()
         total_charge = df_filtered.get("Charge",              pd.Series(0)).sum()
         total_disch  = df_filtered.get("Discharge",           pd.Series(0)).sum()
-        avg_peak     = df_filtered.get("Peak_Power",          pd.Series(0)).mean()
-        avg_peak     = 0.0 if pd.isna(avg_peak) else avg_peak
+        avg_peak     = df_filtered.get("Peak_Power",          pd.Series(0)).mean() or 0.0
 
         # ────────────────────────────────────────
         # GRID ENERGY INPUT
@@ -124,8 +135,7 @@ if uploaded_file is not None:
             min_value=0.0,
             value=0.0,
             step=100.0,
-            format="%.0f",
-            help="Сүлжээнээс авсан нийт эрчим хүчийг оруулна уу"
+            format="%.0f"
         )
 
         # ────────────────────────────────────────
@@ -145,7 +155,7 @@ if uploaded_file is not None:
         st.markdown("---")
 
         # ────────────────────────────────────────
-        # CHARTS TABS
+        # TABS
         # ────────────────────────────────────────
         tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "Үйлдвэрлэл (харьцуулалт)",
@@ -158,10 +168,10 @@ if uploaded_file is not None:
         with tab1:
             st.subheader("Үйлдвэрлэх боломжит vs Үйлдвэрлэсэн эрчим хүч")
             fig1 = go.Figure()
-            if "Theoretical_Yield" in df_filtered:
+            if "Theoretical_Yield" in df_filtered.columns:
                 fig1.add_trace(go.Scatter(x=df_filtered["Date"], y=df_filtered["Theoretical_Yield"],
                                           name="Үйлдвэрлэх боломжит [кВт.ц]", line=dict(color='#10b981', width=2.5)))
-            if "Inverter_Yield" in df_filtered:
+            if "Inverter_Yield" in df_filtered.columns:
                 fig1.add_trace(go.Scatter(x=df_filtered["Date"], y=df_filtered["Inverter_Yield"],
                                           name="Үйлдвэрлэсэн [кВт.ц]", line=dict(color='#3b82f6', width=2.5)))
             fig1.update_layout(height=500, hovermode="x unified",
@@ -215,7 +225,7 @@ if uploaded_file is not None:
                 st.plotly_chart(fig_pie, use_container_width=True)
 
         # ────────────────────────────────────────
-        # DATA TABLE - safe formatting (no .round(2) crash)
+        # DATA TABLE - safe formatting
         # ────────────────────────────────────────
         st.markdown("---")
         st.subheader("Гол үзүүлэлтүүд")
@@ -255,7 +265,7 @@ if uploaded_file is not None:
 
     except Exception as e:
         st.error(f"Файлыг уншихад алдаа гарлаа: {str(e)}")
-        st.info("Шалгах зүйлс:\n• Файл .xlsx форматтай эсэх\n• Sheet1 байгаа эсэх\n• Эхний мөрүүд зөв эсэх")
+        st.info("Шалгах зүйлс:\n• Файл .xlsx форматтай эсэх\n• Sheet1 байгаа эсэх\n• Эхний мөрүүд зөв эсэх (skiprows=1 тохиромжтой эсэх)")
 
 else:
     st.info("Файл сонгоно уу")
