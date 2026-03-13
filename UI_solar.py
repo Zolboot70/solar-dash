@@ -94,13 +94,13 @@ if uploaded_file is not None:
         # ────────────────────────────────────────
         # SAFE TOTALS
         # ────────────────────────────────────────
-        total_theo   = df_filtered.get("Theoretical_Yield", pd.Series(0)).sum()
-        total_inv    = df_filtered.get("Inverter_Yield", pd.Series(0)).sum()
-        total_co2    = df_filtered.get("CO2_Avoided", pd.Series(0)).sum()
+        total_theo = df_filtered.get("Theoretical_Yield", pd.Series(0)).sum()
+        total_inv = df_filtered.get("Inverter_Yield", pd.Series(0)).sum()
+        total_co2 = df_filtered.get("CO2_Avoided", pd.Series(0)).sum()
         total_charge = df_filtered.get("Charge", pd.Series(0)).sum()
-        total_disch  = df_filtered.get("Discharge", pd.Series(0)).sum()
-        avg_peak     = df_filtered.get("Peak_Power", pd.Series(0)).mean()
-        avg_peak     = 0.0 if pd.isna(avg_peak) else avg_peak
+        total_disch = df_filtered.get("Discharge", pd.Series(0)).sum()
+        avg_peak = df_filtered.get("Peak_Power", pd.Series(0)).mean()
+        avg_peak = 0.0 if pd.isna(avg_peak) else avg_peak
 
         # ────────────────────────────────────────
         # GRID ENERGY INPUT
@@ -129,11 +129,11 @@ if uploaded_file is not None:
         )
 
         col1.metric("Үйлдвэрлэх боломжит эрчим хүч", f"{total_theo:,.0f} кВт.ц")
-        col2.metric("Үйлдвэрлэсэн эрчим хүч",       f"{total_inv:,.0f} кВт.ц")
-        col3.metric("CO₂ бууруулсан",                f"{total_co2:,.2f} тн")
-        col4.metric("Нийт ЦЭХ хэрэглээ",            f"{total_consumption:,.0f} кВт.ц")
-        col5.metric("Батарейнаас нийлүүлсэн",        f"{total_disch:,.0f} кВт.ц")
-        col6.metric("Max чадлын дундаж",             f"{avg_peak:,.1f} кВт")
+        col2.metric("Үйлдвэрлэсэн эрчим хүч", f"{total_inv:,.0f} кВт.ц")
+        col3.metric("CO₂ бууруулсан", f"{total_co2:,.2f} тн")
+        col4.metric("Нийт ЦЭХ хэрэглээ", f"{total_consumption:,.0f} кВт.ц")
+        col5.metric("Батарейнаас нийлүүлсэн", f"{total_disch:,.0f} кВт.ц")
+        col6.metric("Max чадлын дундаж", f"{avg_peak:,.1f} кВт")
 
         st.markdown("---")
 
@@ -166,7 +166,8 @@ if uploaded_file is not None:
             fig1.update_layout(
                 height=500,
                 hovermode="x unified",
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                yaxis_title="Чадал [кВт.ц]"           # ← ADDED
             )
             st.plotly_chart(fig1, use_container_width=True)
 
@@ -178,7 +179,10 @@ if uploaded_file is not None:
                 y="Peak_Power" if "Peak_Power" in df_filtered else pd.Series(0),
                 color_discrete_sequence=["#14b8a6"]
             )
-            fig2.update_layout(height=500)
+            fig2.update_layout(
+                height=500,
+                yaxis_title="Чадал [кВт]"              # ← ADDED (you can change to [кВт.ц] if preferred)
+            )
             st.plotly_chart(fig2, use_container_width=True)
 
         with tab3:
@@ -190,7 +194,10 @@ if uploaded_file is not None:
                 color_discrete_sequence=["#f59e0b"]
             )
             fig3.update_traces(line=dict(width=2.8))
-            fig3.update_layout(height=500)
+            fig3.update_layout(
+                height=500,
+                yaxis_title="тонн"                     # ← ADDED
+            )
             st.plotly_chart(fig3, use_container_width=True)
 
         with tab4:
@@ -211,16 +218,17 @@ if uploaded_file is not None:
             fig4.update_layout(
                 barmode="group",
                 height=500,
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                yaxis_title="Чадал [кВт.ц]"            # ← ADDED
             )
             st.plotly_chart(fig4, use_container_width=True)
 
         with tab5:
             st.subheader("Сүлжээнээс нийлүүлсэн vs НЦС-ын үйлдвэрлэсэн эрчим хүч")
-            
+           
             total_produced = df_filtered.get("Inverter_Yield", pd.Series(0)).sum()
             total_grid = grid_energy
-            
+           
             if total_produced + total_grid == 0:
                 st.info("Өгөгдөл байхгүй эсвэл нийт утга 0 байна.")
             else:
@@ -228,7 +236,7 @@ if uploaded_file is not None:
                     "Төрөл": ["НЦС-ын үйлдвэрлэсэн", "Сүлжээнээс нийлүүлсэн"],
                     "Эрчим хүч (кВт·ц)": [total_produced, total_grid]
                 })
-                
+               
                 fig_pie = px.pie(
                     pie_data,
                     values="Эрчим хүч (кВт·ц)",
@@ -236,15 +244,15 @@ if uploaded_file is not None:
                     color_discrete_sequence=["#3b82f6", "#ef4444"],
                     hole=0.4
                 )
-                
+               
                 fig_pie.update_traces(
-                    textposition='outside',           # Labels outside → always visible
-                    textinfo='label+percent',         # Shows name + percentage
+                    textposition='outside',
+                    textinfo='label+percent',
                     insidetextorientation='horizontal',
                     rotation=0,
                     sort=False
                 )
-                
+               
                 fig_pie.update_layout(
                     height=550,
                     margin=dict(l=40, r=40, t=40, b=120),
@@ -256,7 +264,7 @@ if uploaded_file is not None:
                         x=0.5
                     )
                 )
-                
+               
                 st.plotly_chart(fig_pie, use_container_width=True)
 
         # ────────────────────────────────────────
@@ -270,6 +278,7 @@ if uploaded_file is not None:
 
         cols_to_show = ["Date"] + [c for c in ["Theoretical_Yield", "Inverter_Yield", "Peak_Power",
                                                "CO2_Avoided", "Charge", "Discharge"] if c in display_df]
+
         renamed = {
             "Date": "Огноо",
             "Theoretical_Yield": "Боломжит [кВт.ц]",
@@ -289,7 +298,6 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"Файлыг уншихад алдаа гарлаа:\n{str(e)}")
         st.info("Шалгах зүйлс:\n• .xlsx форматтай эсэх\n• Sheet1 байгаа эсэх\n• Загвар зөв эсэх")
-
 else:
     st.info("Файл сонгоно уу")
 
