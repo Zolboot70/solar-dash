@@ -22,10 +22,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.set_page_config(
-    page_title="Нарны цахилгаан станцын үйлдвэрлэл",
-    layout="wide"
-)
+st.set_page_config(page_title="Нарны цахилгаан станцын үйлдвэрлэл", layout="wide")
 
 st.title("Нарны цахилгаан станцын үйлдвэрлэл")
 st.markdown("PVMS-ын стандарт хэлбэртэй файл оруулна уу")
@@ -39,16 +36,48 @@ uploaded_file = st.file_uploader(
 if uploaded_file is not None:
     try:
         # ────────────────────────────────────────
-        # READ DATA
+        # READ & CLEAN DATA
         # ────────────────────────────────────────
         df = pd.read_excel(uploaded_file, sheet_name="Sheet1", skiprows=1)
 
-        # Clean column names (remove extra spaces)
-        df.columns = df.columns.str.strip().str.replace(r'\s+', ' ', regex=True)
+        # Very aggressive column name cleaning
+        df.columns = (
+            df.columns
+            .astype(str)
+            .str.strip()
+            .str.replace(r'\s+', ' ', regex=True)
+            .str.replace(r'[^a-zA-Z0-9 ()°%°/.,-]', '', regex=True)  # remove strange chars
+        )
 
-        # Flexible renaming keywords
+        # Debug: show real column names to user (very helpful!)
+        st.caption("Файл дахь баганууд (түр зуурын мэдээлэл):")
+        st.caption(", ".join(df.columns.tolist()))
+
+        # ────────────────────────────────────────
+        # DATE COLUMN - super reliable detection
+        # ────────────────────────────────────────
+        date_col = None
+        for col in df.columns:
+            col_lower = col.lower()
+            if "statistical" in col_lower or "period" in col_lower or "date" in col_lower or "огноо" in col_lower:
+                date_col = col
+                break
+
+        if date_col is None:
+            st.error("Огнооны багана олдсонгүй! ('Statistical Period' эсвэл 'Date' байх ёстой)")
+            st.stop()
+
+        # Convert to datetime (handles both real dates and serial numbers)
+        df["Date"] = pd.to_datetime(df[date_col], errors="coerce", unit='D', origin='1899-12-30')
+        df = df.drop(columns=[date_col], errors="ignore")
+
+        df = df.dropna(subset=["Date"])
+        df = df.sort_values("Date")
+
+        # ────────────────────────────────────────
+        # RENAMING - more keywords
+        # ────────────────────────────────────────
         rename_keywords = {
-            "date|period|statistical|огноо|хугацаа|report date": "Date",
             "theoretical|боломжит|yield": "Theoretical_Yield",
             "inverter": "Inverter_Yield",
             "pv yield|pv": "PV_Yield",
@@ -67,32 +96,6 @@ if uploaded_file is not None:
                     break
 
         df = df.rename(columns=rename_map)
-
-        # ────────────────────────────────────────
-        # DATE COLUMN HANDLING - more robust detection
-        # ────────────────────────────────────────
-        possible_date_keywords = [
-            "date", "period", "statistical", "statistical period",
-            "огноо", "хугацаа", "report date", "time"
-        ]
-
-        date_col = None
-        for col in df.columns:
-            col_lower = str(col).lower().strip()
-            if any(kw in col_lower for kw in possible_date_keywords):
-                date_col = col
-                break
-
-        if date_col:
-            df["Date"] = pd.to_datetime(df[date_col], errors="coerce")
-            df = df.drop(columns=[date_col], errors="ignore")
-            # st.info(f"Огнооны багана: {date_col} → Date болголоо")
-        else:
-            st.error("Огнооны багана олдсонгүй! ('Statistical Period', 'Date', 'Огноо' гэх мэт байх ёстой)")
-            st.stop()
-
-        df = df.dropna(subset=["Date"])
-        df = df.sort_values("Date")
 
         # ────────────────────────────────────────
         # SIDEBAR FILTER
@@ -155,7 +158,7 @@ if uploaded_file is not None:
         st.markdown("---")
 
         # ────────────────────────────────────────
-        # TABS
+        # TABS (charts)
         # ────────────────────────────────────────
         tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "Үйлдвэрлэл (харьцуулалт)",
@@ -225,7 +228,7 @@ if uploaded_file is not None:
                 st.plotly_chart(fig_pie, use_container_width=True)
 
         # ────────────────────────────────────────
-        # DATA TABLE - safe formatting
+        # DATA TABLE
         # ────────────────────────────────────────
         st.markdown("---")
         st.subheader("Гол үзүүлэлтүүд")
@@ -265,7 +268,11 @@ if uploaded_file is not None:
 
     except Exception as e:
         st.error(f"Файлыг уншихад алдаа гарлаа: {str(e)}")
-        st.info("Шалгах зүйлс:\n• Файл .xlsx форматтай эсэх\n• Sheet1 байгаа эсэх\n• Эхний мөрүүд зөв эсэх (skiprows=1 тохиромжтой эсэх)")
+        st.info("Шалгах зүйлс:\n"
+                "• Файл .xlsx форматтай эсэх\n"
+                "• Sheet1 нэртэй хуудас байгаа эсэх\n"
+                "• Эхний мөрүүд зөв эсэх (skiprows=1 тохиромжтой эсэх)\n"
+                "• 'Statistical Period' эсвэл 'Date' гэсэн багана байгаа эсэх")
 
 else:
     st.info("Файл сонгоно уу")
