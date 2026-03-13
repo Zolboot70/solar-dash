@@ -238,26 +238,23 @@ if uploaded_file is not None:
                 )
                 
                 fig_pie.update_traces(
-                    textposition='inside',
-                    textinfo='percent+label',
-                    insidetextorientation='horizontal',  # ← This prevents tilted/rotated text
+                    textposition='outside',           # Labels outside → always visible
+                    textinfo='label+percent',         # Shows name + percentage
+                    insidetextorientation='horizontal',
                     rotation=0,
                     sort=False
                 )
                 
                 fig_pie.update_layout(
-                    height=600,
-                    autosize=False,
-                    margin=dict(l=40, r=40, t=60, b=140),
+                    height=550,
+                    margin=dict(l=40, r=40, t=40, b=120),
                     legend=dict(
                         orientation="h",
                         yanchor="top",
-                        y=-0.25,
+                        y=-0.2,
                         xanchor="center",
                         x=0.5
-                    ),
-                    uniformtext_minsize=12,
-                    uniformtext_mode='hide'
+                    )
                 )
                 
                 st.plotly_chart(fig_pie, use_container_width=True)
