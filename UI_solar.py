@@ -107,7 +107,7 @@ if uploaded_file is not None:
         # ────────────────────────────────────────
         st.subheader("Сүлжээнээс нийлүүлсэн эрчим хүч")
         grid_energy = st.number_input(
-            "Сүлжээнээс нийлүүлсэн эрчим хүчийг оруулна уу (кВт·ц)",
+            "Сүлжээнээс нийлүүлсэн эрчим хүчийг оруулна уу (кВт.ц)",
             min_value=0.0,
             value=0.0,
             step=100.0,
@@ -128,11 +128,11 @@ if uploaded_file is not None:
             1200
         )
 
-        col1.metric("Үйлдвэрлэх боломжит эрчим хүч", f"{total_theo:,.0f} кВт·ц")
-        col2.metric("Үйлдвэрлэсэн эрчим хүч",       f"{total_inv:,.0f} кВт·ц")
+        col1.metric("Үйлдвэрлэх боломжит эрчим хүч", f"{total_theo:,.0f} кВт.ц")
+        col2.metric("Үйлдвэрлэсэн эрчим хүч",       f"{total_inv:,.0f} кВт.ц")
         col3.metric("CO₂ бууруулсан",                f"{total_co2:,.2f} тн")
-        col4.metric("Нийт ЦЭХ хэрэглээ",            f"{total_consumption:,.0f} кВт·ц")
-        col5.metric("Батарейнаас нийлүүлсэн",        f"{total_disch:,.0f} кВт·ц")
+        col4.metric("Нийт ЦЭХ хэрэглээ",            f"{total_consumption:,.0f} кВт.ц")
+        col5.metric("Батарейнаас нийлүүлсэн",        f"{total_disch:,.0f} кВт.ц")
         col6.metric("Max чадлын дундаж",             f"{avg_peak:,.1f} кВт")
 
         st.markdown("---")
@@ -241,3 +241,4 @@ else:
 
 st.markdown("---")
 st.caption("МАК НЦС үйлдвэрлэл")
+
