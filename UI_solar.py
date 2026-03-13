@@ -112,7 +112,7 @@ if uploaded_file is not None:
             value=0.0,
             step=100.0,
             format="%.0f",
-            help="Сүлжээнээс авсан нийт эрчим хүчийг оруулна уу"
+            help="Суга сда уншаад ойлгодоггүй юм уу"
         )
 
         # ────────────────────────────────────────
@@ -231,7 +231,7 @@ if uploaded_file is not None:
                 
                 fig_pie = px.pie(
                     pie_data,
-                    values="Эрчим хүч (кВт.ц)",
+                    values="Эрчим хүч (кВт·ц)",
                     names="Төрөл",
                     color_discrete_sequence=["#3b82f6", "#ef4444"],
                     hole=0.4
@@ -289,3 +289,4 @@ else:
 
 st.markdown("---")
 st.caption("МАК НЦС үйлдвэрлэл")
+
