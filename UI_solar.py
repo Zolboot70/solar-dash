@@ -4,19 +4,37 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 
+# ────────────────────────────────────────
+# Custom CSS - make metrics smaller
+# ────────────────────────────────────────
+st.markdown(
+    """
+    <style>
+        [data-testid="stMetricValue"] {
+            font-size: 1.4rem !important;   /* Adjust: 1.2rem, 1.1rem, 1rem for even smaller */
+            line-height: 1.2 !important;
+        }
+        [data-testid="stMetricLabel"] {
+            font-size: 0.9rem !important;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 st.set_page_config(
     page_title="Нарны цахилгаан станцын үйлдвэрлэл",
     layout="wide"
 )
 
 # ────────────────────────────────────────
-#               TITLE & UPLOAD
+# TITLE & UPLOAD
 # ────────────────────────────────────────
 st.title("Нарны цахилгаан станцын үйлдвэрлэл")
 st.markdown("PVMS-ын стандарт хэлбэртэй файл оруулна уу")
 
 uploaded_file = st.file_uploader(
-    "НЦС-ын үйлдвэрлэлийн мэдээг оруулах",
+    "НЦС-ын үйлдвэрлэлийн мэдээг оруулна уу",
     type=["xlsx"],
     help="Файл дотор 'Sheet1' байх ёстой"
 )
@@ -24,11 +42,11 @@ uploaded_file = st.file_uploader(
 if uploaded_file is not None:
     try:
         # ────────────────────────────────────────
-        #               READ DATA
+        # READ DATA
         # ────────────────────────────────────────
         df = pd.read_excel(uploaded_file, sheet_name="Sheet1", skiprows=1)
 
-        # Rename columns to English for easier coding (but we display Mongolian)
+        # Rename columns to English for easier coding
         rename_dict = {
             "Statistical Period": "Date",
             "Theoretical Yield (kWh)": "Theoretical_Yield",
@@ -39,11 +57,11 @@ if uploaded_file is not None:
             "Discharge (kWh)": "Discharge",
         }
 
-        # Keep only columns we care about + try to match
+        # Keep only relevant columns + fuzzy match
         available_cols = [c for c in df.columns if any(k in c for k in rename_dict)]
         df = df[available_cols].copy()
 
-        # Rename to standardized names
+        # Apply renaming
         for old, new in rename_dict.items():
             for col in df.columns:
                 if old in col:
@@ -52,11 +70,11 @@ if uploaded_file is not None:
 
         # Convert Date
         df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-        df = df.dropna(subset=["Date"])           # drop bad dates
+        df = df.dropna(subset=["Date"])
         df = df.sort_values("Date")
 
         # ────────────────────────────────────────
-        #               SIDEBAR FILTER
+        # SIDEBAR FILTER
         # ────────────────────────────────────────
         st.sidebar.header("МАК НЦС")
 
@@ -79,34 +97,48 @@ if uploaded_file is not None:
             df_filtered = df.copy()
 
         # ────────────────────────────────────────
-        #               KEY METRICS
+        # KEY METRICS (safe - missing columns = 0)
         # ────────────────────────────────────────
         col1, col2, col3, col4, col5, col6 = st.columns(6)
 
-        total_theo   = df_filtered["Theoretical_Yield"].sum()
-        total_inv    = df_filtered["Inverter_Yield"].sum()
-        total_co2    = df_filtered["CO2_Avoided"].sum()
-        total_charge = df_filtered["Charge"].sum()
-        total_disch  = df_filtered["Discharge"].sum()
-        avg_peak     = df_filtered["Peak_Power"].mean()
+        total_theo   = df_filtered.get("Theoretical_Yield", pd.Series(0)).sum()
+        total_inv    = df_filtered.get("Inverter_Yield", pd.Series(0)).sum()
+        total_co2    = df_filtered.get("CO2_Avoided", pd.Series(0)).sum()
+        total_charge = df_filtered.get("Charge", pd.Series(0)).sum()
+        total_disch  = df_filtered.get("Discharge", pd.Series(0)).sum()
+        avg_peak     = df_filtered.get("Peak_Power", pd.Series(0)).mean()
+        avg_peak     = 0.0 if pd.isna(avg_peak) else avg_peak
 
         col1.metric("Үйлдвэрлэх боломжит эрчим хүч", f"{total_theo:,.0f} кВт.ц")
-        col2.metric("Үйлдвэрлэсэн эрчим хүч",       f"{total_inv:,.0f} кВт·ц")
+        col2.metric("Үйлдвэрлэсэн эрчим хүч",       f"{total_inv:,.0f} кВт.ц")
         col3.metric("CO₂ бууруулсан",                f"{total_co2:,.2f} тн")
         col4.metric("Батарейг цэнэглэсэн",           f"{total_charge:,.0f} кВт.ц")
         col5.metric("Батарейнаас нийлүүлсэн",        f"{total_disch:,.0f} кВт.ц")
-        col6.metric("Max чадлын дундаж",     f"{avg_peak:,.1f} кВт")
+        col6.metric("Max чадлын дундаж",             f"{avg_peak:,.1f} кВт")
 
         st.markdown("---")
 
         # ────────────────────────────────────────
-        #               CHARTS
+        # GRID ENERGY INPUT
         # ────────────────────────────────────────
-        tab1, tab2, tab3, tab4 = st.tabs([
+        st.subheader("Сүлжээнээс нийлүүлсэн эрчим хүч")
+        grid_energy = st.number_input(
+            "Сүлжээнээс нийлүүлсэн эрчим хүчийг оруулна уу (кВт.ц)",
+            min_value=0.0,
+            value=0.0,
+            step=100.0,
+            format="%.0f"
+        )
+
+        # ────────────────────────────────────────
+        # CHARTS TABS
+        # ────────────────────────────────────────
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "Үйлдвэрлэл (харьцуулалт)",
             "Чадлын оргил утга",
             "CO₂ бууралт",
-            "Батарей (цэнэглэлт / нийлүүлэлт)"
+            "Батарей (цэнэглэлт / нийлүүлэлт)",
+            "Сүлжээ нийлүүлэлт vs НЦС үйлдвэрлэл"
         ])
 
         with tab1:
@@ -115,14 +147,14 @@ if uploaded_file is not None:
 
             fig1.add_trace(go.Scatter(
                 x=df_filtered["Date"],
-                y=df_filtered["Theoretical_Yield"],
+                y=df_filtered.get("Theoretical_Yield", pd.Series(0)),
                 name="Үйлдвэрлэх боломжит эрчим хүч [кВт.ц]",
                 line=dict(color='#10b981', width=2.5)
             ))
 
             fig1.add_trace(go.Scatter(
                 x=df_filtered["Date"],
-                y=df_filtered["Inverter_Yield"],
+                y=df_filtered.get("Inverter_Yield", pd.Series(0)),
                 name="Үйлдвэрлэсэн эрчим хүч [кВт.ц]",
                 line=dict(color='#3b82f6', width=2.5)
             ))
@@ -139,7 +171,7 @@ if uploaded_file is not None:
             fig2 = px.bar(
                 df_filtered,
                 x="Date",
-                y="Peak_Power",
+                y="Peak_Power" if "Peak_Power" in df_filtered else pd.Series(0),
                 title="",
                 color_discrete_sequence=["#14b8a6"]
             )
@@ -151,7 +183,7 @@ if uploaded_file is not None:
             fig3 = px.line(
                 df_filtered,
                 x="Date",
-                y="CO2_Avoided",
+                y="CO2_Avoided" if "CO2_Avoided" in df_filtered else pd.Series(0),
                 title="",
                 color_discrete_sequence=["#f59e0b"]
             )
@@ -165,14 +197,14 @@ if uploaded_file is not None:
 
             fig4.add_trace(go.Bar(
                 x=df_filtered["Date"],
-                y=df_filtered["Charge"],
+                y=df_filtered.get("Charge", pd.Series(0)),
                 name="Батарейг цэнэглэсэн",
                 marker_color="#8b5cf6"
             ))
 
             fig4.add_trace(go.Bar(
                 x=df_filtered["Date"],
-                y=df_filtered["Discharge"],
+                y=df_filtered.get("Discharge", pd.Series(0)),
                 name="Батарейнаас нийлүүлсэн",
                 marker_color="#ec4899"
             ))
@@ -184,8 +216,38 @@ if uploaded_file is not None:
             )
             st.plotly_chart(fig4, use_container_width=True)
 
+        with tab5:
+            st.subheader("Сүлжээнээс нийлүүлсэн vs Өөрийн үйлдвэрлэсэн эрчим хүч")
+            
+            total_produced = df_filtered.get("Inverter_Yield", pd.Series(0)).sum()
+            total_grid = grid_energy
+            
+            if total_produced + total_grid == 0:
+                st.info("Өгөгдөл байхгүй эсвэл нийт 0 байна.")
+            else:
+                pie_data = pd.DataFrame({
+                    "Төрөл": ["Өөрийн үйлдвэрлэсэн", "Сүлжээнээс нийлүүлсэн"],
+                    "Эрчим хүч (кВт·ц)": [total_produced, total_grid]
+                })
+                
+                fig_pie = px.pie(
+                    pie_data,
+                    values="Эрчим хүч (кВт·ц)",
+                    names="Төрөл",
+                    color_discrete_sequence=["#3b82f6", "#ef4444"],
+                    hole=0.4
+                )
+                
+                fig_pie.update_traces(textposition='inside', textinfo='percent+label')
+                fig_pie.update_layout(
+                    height=500,
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                
+                st.plotly_chart(fig_pie, use_container_width=True)
+
         # ────────────────────────────────────────
-        #               DATA TABLE
+        # DATA TABLE
         # ────────────────────────────────────────
         st.markdown("---")
         st.subheader("Гол үзүүлэлтүүд")
@@ -194,8 +256,10 @@ if uploaded_file is not None:
         display_df["Date"] = display_df["Date"].dt.strftime("%Y-%m-%d")
 
         st.dataframe(
-            display_df[["Date", "Theoretical_Yield", "Inverter_Yield",
-                        "Peak_Power", "CO2_Avoided", "Charge", "Discharge"]]
+            display_df[["Date"] + 
+                       [col for col in ["Theoretical_Yield", "Inverter_Yield", "Peak_Power", 
+                                        "CO2_Avoided", "Charge", "Discharge"] 
+                        if col in display_df.columns]]
             .rename(columns={
                 "Date": "Огноо",
                 "Theoretical_Yield": "Боломжит [кВт.ц]",
@@ -212,11 +276,13 @@ if uploaded_file is not None:
 
     except Exception as e:
         st.error(f"Файлыг уншихад алдаа гарлаа:\n{str(e)}")
-        st.info("Дараах зүйлсийг шалгаарай:\n• Файл .xlsx форматтай эсэх\n• Sheet1 нэртэй хуудас байгаа эсэх\n• Загвар өмнөх жишээтэй төстэй эсэх")
+        st.info("Дараах зүйлсийг шалгаарай:\n"
+                "• Файл .xlsx форматтай эсэх\n"
+                "• Sheet1 нэртэй хуудас байгаа эсэх\n"
+                "• Загвар өмнөх жишээтэй төстэй эсэх")
 
 else:
-    st.info("Файл сонгоно уу ")
+    st.info("Файл сонгоно уу")
 
 st.markdown("---")
-
-st.caption("МАК НЦС үйлдювэрлэл")
+st.caption("МАК НЦС үйлдвэрлэл")
