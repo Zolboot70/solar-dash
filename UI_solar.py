@@ -145,7 +145,7 @@ if uploaded_file is not None:
             "CO₂ бууралт",
             "Батарей (цэнэглэлт / нийлүүлэлт)",
             "Сүлжээ vs Өөрийн үйлдвэрлэл",
-            "Хэмнэсэн зардал"                    # ← NEW TAB
+            "Хэмнэсэн зардал"
         ])
 
         with tab1:
@@ -272,7 +272,6 @@ if uploaded_file is not None:
         with tab6:
             st.subheader("Хэмнэсэн зардал (төг)")
             
-            # Calculate daily saved cost
             PRICE_PER_KWH = 260
             df_filtered["Saved_Cost"] = df_filtered.get("Inverter_Yield", pd.Series(0)) * PRICE_PER_KWH
             
@@ -297,7 +296,7 @@ if uploaded_file is not None:
                 mode='lines+markers'
             ))
             
-            # Cumulative savings (secondary axis)
+            # Cumulative savings
             df_filtered["Cumulative_Saved"] = df_filtered["Saved_Cost"].cumsum()
             
             fig6.add_trace(go.Scatter(
@@ -312,19 +311,19 @@ if uploaded_file is not None:
                 height=550,
                 hovermode="x unified",
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                xaxis_title="Огноо",
                 yaxis=dict(
                     title="Зардал [төг]",
-                    titlefont=dict(color="#f97316"),
+                    **{'title_font': dict(color="#f97316")},
                     tickfont=dict(color="#f97316")
                 ),
                 yaxis2=dict(
                     title="Хуримтлагдсан [төг]",
-                    titlefont=dict(color="#047857"),
+                    **{'title_font': dict(color="#047857")},
                     tickfont=dict(color="#047857"),
                     overlaying="y",
                     side="right"
-                ),
-                xaxis_title="Огноо"
+                )
             )
             
             st.plotly_chart(fig6, use_container_width=True)
