@@ -318,7 +318,7 @@ if uploaded_file is not None:
                     tickfont=dict(color="#f97316")
                 ),
                 yaxis2=dict(
-                    title="Хуримтлагдсан [төг]",
+                    title="Хэмнэлт [төг]",
                     **{'title_font': dict(color="#047857")},
                     tickfont=dict(color="#047857"),
                     overlaying="y",
