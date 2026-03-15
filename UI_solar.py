@@ -73,7 +73,6 @@ if uploaded_file is not None:
         # SIDEBAR FILTER
         # ────────────────────────────────────────
         st.sidebar.header("МАК НЦС")
-
         min_date = df["Date"].min().date()
         max_date = df["Date"].max().date()
 
@@ -94,13 +93,13 @@ if uploaded_file is not None:
         # ────────────────────────────────────────
         # SAFE TOTALS
         # ────────────────────────────────────────
-        total_theo = df_filtered.get("Theoretical_Yield", pd.Series(0)).sum()
-        total_inv = df_filtered.get("Inverter_Yield", pd.Series(0)).sum()
-        total_co2 = df_filtered.get("CO2_Avoided", pd.Series(0)).sum()
-        total_charge = df_filtered.get("Charge", pd.Series(0)).sum()
-        total_disch = df_filtered.get("Discharge", pd.Series(0)).sum()
-        avg_peak = df_filtered.get("Peak_Power", pd.Series(0)).mean()
-        avg_peak = 0.0 if pd.isna(avg_peak) else avg_peak
+        total_theo    = df_filtered.get("Theoretical_Yield", pd.Series(0)).sum()
+        total_inv     = df_filtered.get("Inverter_Yield",    pd.Series(0)).sum()
+        total_co2     = df_filtered.get("CO2_Avoided",       pd.Series(0)).sum()
+        total_charge  = df_filtered.get("Charge",            pd.Series(0)).sum()
+        total_disch   = df_filtered.get("Discharge",         pd.Series(0)).sum()
+        avg_peak      = df_filtered.get("Peak_Power",        pd.Series(0)).mean()
+        avg_peak      = 0.0 if pd.isna(avg_peak) else avg_peak
 
         # ────────────────────────────────────────
         # GRID ENERGY INPUT
@@ -129,23 +128,24 @@ if uploaded_file is not None:
         )
 
         col1.metric("Үйлдвэрлэх боломжит эрчим хүч", f"{total_theo:,.0f} кВт.ц")
-        col2.metric("Үйлдвэрлэсэн эрчим хүч", f"{total_inv:,.0f} кВт.ц")
-        col3.metric("CO₂ бууруулсан", f"{total_co2:,.2f} тн")
-        col4.metric("Нийт ЦЭХ хэрэглээ", f"{total_consumption:,.0f} кВт.ц")
-        col5.metric("Батарейнаас нийлүүлсэн", f"{total_disch:,.0f} кВт.ц")
-        col6.metric("Max чадлын дундаж", f"{avg_peak:,.1f} кВт")
+        col2.metric("Үйлдвэрлэсэн эрчим хүч",       f"{total_inv:,.0f} кВт.ц")
+        col3.metric("CO₂ бууруулсан",                f"{total_co2:,.2f} тн")
+        col4.metric("Нийт ЦЭХ хэрэглээ",             f"{total_consumption:,.0f} кВт.ц")
+        col5.metric("Батарейнаас нийлүүлсэн",        f"{total_disch:,.0f} кВт.ц")
+        col6.metric("Max чадлын дундаж",             f"{avg_peak:,.1f} кВт")
 
         st.markdown("---")
 
         # ────────────────────────────────────────
         # CHARTS TABS
         # ────────────────────────────────────────
-        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
             "Үйлдвэрлэл (харьцуулалт)",
             "Чадлын оргил утга",
             "CO₂ бууралт",
             "Батарей (цэнэглэлт / нийлүүлэлт)",
-            "Сүлжээ vs Өөрийн үйлдвэрлэл"
+            "Сүлжээ vs Өөрийн үйлдвэрлэл",
+            "Хэмнэсэн зардал"                    # ← NEW TAB
         ])
 
         with tab1:
@@ -167,7 +167,7 @@ if uploaded_file is not None:
                 height=500,
                 hovermode="x unified",
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                yaxis_title="Чадал [кВт.ц]"           # ← ADDED
+                yaxis_title="Чадал [кВт.ц]"
             )
             st.plotly_chart(fig1, use_container_width=True)
 
@@ -181,7 +181,7 @@ if uploaded_file is not None:
             )
             fig2.update_layout(
                 height=500,
-                yaxis_title="Чадал [кВт]"              # ← ADDED (you can change to [кВт.ц] if preferred)
+                yaxis_title="Чадал [кВт]"
             )
             st.plotly_chart(fig2, use_container_width=True)
 
@@ -196,7 +196,7 @@ if uploaded_file is not None:
             fig3.update_traces(line=dict(width=2.8))
             fig3.update_layout(
                 height=500,
-                yaxis_title="тонн"                     # ← ADDED
+                yaxis_title="тонн"
             )
             st.plotly_chart(fig3, use_container_width=True)
 
@@ -219,16 +219,15 @@ if uploaded_file is not None:
                 barmode="group",
                 height=500,
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                yaxis_title="Чадал [кВт.ц]"            # ← ADDED
+                yaxis_title="Чадал [кВт.ц]"
             )
             st.plotly_chart(fig4, use_container_width=True)
 
         with tab5:
             st.subheader("Сүлжээнээс нийлүүлсэн vs НЦС-ын үйлдвэрлэсэн эрчим хүч")
-           
             total_produced = df_filtered.get("Inverter_Yield", pd.Series(0)).sum()
             total_grid = grid_energy
-           
+
             if total_produced + total_grid == 0:
                 st.info("Өгөгдөл байхгүй эсвэл нийт утга 0 байна.")
             else:
@@ -236,7 +235,7 @@ if uploaded_file is not None:
                     "Төрөл": ["НЦС-ын үйлдвэрлэсэн", "Сүлжээнээс нийлүүлсэн"],
                     "Эрчим хүч (кВт·ц)": [total_produced, total_grid]
                 })
-               
+
                 fig_pie = px.pie(
                     pie_data,
                     values="Эрчим хүч (кВт·ц)",
@@ -244,7 +243,7 @@ if uploaded_file is not None:
                     color_discrete_sequence=["#3b82f6", "#ef4444"],
                     hole=0.4
                 )
-               
+
                 fig_pie.update_traces(
                     textposition='outside',
                     textinfo='label+percent',
@@ -252,7 +251,7 @@ if uploaded_file is not None:
                     rotation=0,
                     sort=False
                 )
-               
+
                 fig_pie.update_layout(
                     height=550,
                     margin=dict(l=40, r=40, t=40, b=120),
@@ -264,8 +263,71 @@ if uploaded_file is not None:
                         x=0.5
                     )
                 )
-               
+
                 st.plotly_chart(fig_pie, use_container_width=True)
+
+        # ────────────────────────────────────────
+        # NEW TAB: Хэмнэсэн зардал
+        # ────────────────────────────────────────
+        with tab6:
+            st.subheader("Хэмнэсэн зардал (төг)")
+            
+            # Calculate daily saved cost
+            PRICE_PER_KWH = 260
+            df_filtered["Saved_Cost"] = df_filtered.get("Inverter_Yield", pd.Series(0)) * PRICE_PER_KWH
+            
+            total_saved = df_filtered["Saved_Cost"].sum()
+            
+            st.metric(
+                "Нийт хэмнэсэн зардал",
+                f"{total_saved:,.0f} ₮",
+                help=f"Үйлдвэрлэсэн эрчим хүч × {PRICE_PER_KWH} төг/кВт·ц"
+            )
+            
+            st.markdown("---")
+            
+            fig6 = go.Figure()
+            
+            # Daily savings
+            fig6.add_trace(go.Scatter(
+                x=df_filtered["Date"],
+                y=df_filtered["Saved_Cost"],
+                name="Өдрийн хэмнэлт",
+                line=dict(color='#f97316', width=2.8),
+                mode='lines+markers'
+            ))
+            
+            # Cumulative savings (secondary axis)
+            df_filtered["Cumulative_Saved"] = df_filtered["Saved_Cost"].cumsum()
+            
+            fig6.add_trace(go.Scatter(
+                x=df_filtered["Date"],
+                y=df_filtered["Cumulative_Saved"],
+                name="Хуримтлагдсан хэмнэлт",
+                line=dict(color='#047857', width=3, dash='dot'),
+                yaxis="y2"
+            ))
+            
+            fig6.update_layout(
+                height=550,
+                hovermode="x unified",
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                yaxis=dict(
+                    title="Зардал [төг]",
+                    titlefont=dict(color="#f97316"),
+                    tickfont=dict(color="#f97316")
+                ),
+                yaxis2=dict(
+                    title="Хуримтлагдсан [төг]",
+                    titlefont=dict(color="#047857"),
+                    tickfont=dict(color="#047857"),
+                    overlaying="y",
+                    side="right"
+                ),
+                xaxis_title="Огноо"
+            )
+            
+            st.plotly_chart(fig6, use_container_width=True)
 
         # ────────────────────────────────────────
         # DATA TABLE
@@ -276,8 +338,10 @@ if uploaded_file is not None:
         display_df = df_filtered.copy()
         display_df["Date"] = display_df["Date"].dt.strftime("%Y-%m-%d")
 
-        cols_to_show = ["Date"] + [c for c in ["Theoretical_Yield", "Inverter_Yield", "Peak_Power",
-                                               "CO2_Avoided", "Charge", "Discharge"] if c in display_df]
+        cols_to_show = ["Date"] + [c for c in [
+            "Theoretical_Yield", "Inverter_Yield", "Peak_Power",
+            "CO2_Avoided", "Charge", "Discharge"
+        ] if c in display_df]
 
         renamed = {
             "Date": "Огноо",
@@ -298,6 +362,7 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"Файлыг уншихад алдаа гарлаа:\n{str(e)}")
         st.info("Шалгах зүйлс:\n• .xlsx форматтай эсэх\n• Sheet1 байгаа эсэх\n• Загвар зөв эсэх")
+
 else:
     st.info("Файл сонгоно уу")
 
