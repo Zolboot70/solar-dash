@@ -302,7 +302,7 @@ if uploaded_file is not None:
             fig6.add_trace(go.Scatter(
                 x=df_filtered["Date"],
                 y=df_filtered["Cumulative_Saved"],
-                name="Хуримтлагдсан хэмнэлт",
+                name="Нийт хэмнэлт",
                 line=dict(color='#047857', width=3, dash='dot'),
                 yaxis="y2"
             ))
